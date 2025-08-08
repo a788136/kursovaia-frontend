@@ -1,10 +1,10 @@
-import LoginButton from '../components/LoginButton';
+import { useAuth } from '../contexts/AuthContext';
 
-export default function LoginPage() {
+export default function Login() {
+  const { login } = useAuth();
   return (
-    <div>
-      <h1 className="text-xl mb-4">Вход</h1>
-      <LoginButton />
+    <div style={{ display:'grid', placeItems:'center', minHeight:'60vh' }}>
+      <button onClick={login}>Войти через Google</button>
     </div>
   );
 }

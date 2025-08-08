@@ -1,57 +1,40 @@
-// src/contexts/AuthContext.jsx
-import { createContext, useContext, useState, useEffect, useMemo } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import api from '../api/axios';
 
-const AuthContext = createContext();
+const AuthCtx = createContext(null);
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const backend = 'https://kursovaia-backend.onrender.com';
-
-  useEffect(() => {
-    let cancelled = false;
-
-    (async () => {
-      try {
-        const res = await fetch(`${backend}/auth/me`, {
-          credentials: 'include', // ОБЯЗАТЕЛЬНО для куки
-        });
-        if (!res.ok) throw new Error('unauthorized');
-        const data = await res.json();
-        if (!cancelled) setUser(data.user);
-      } catch {
-        if (!cancelled) setUser(null);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
+  const refresh = useCallback(async () => {
+    try {
+      const { data } = await api.get('/auth/me');
+      if (data?.ok) setUser(data.user);
+      else setUser(null);
+    } catch {
+      setUser(null);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  const loginUrl = `${backend}/auth/google`;
+  useEffect(() => { refresh(); }, [refresh]);
 
-  async function logout() {
-    try {
-      await fetch(`${backend}/auth/logout`, {
-        credentials: 'include',
-      });
-    } finally {
-      setUser(null);
-    }
-  }
+  const login = () => {
+    window.location.href = `${import.meta.env.VITE_API_URL}/auth/google`;
+  };
 
-  const value = useMemo(
-    () => ({ user, setUser, loading, loginUrl, logout }),
-    [user, loading, loginUrl]
+  const logout = async () => {
+    await api.get('/auth/logout');
+    setUser(null);
+  };
+
+  return (
+    <AuthCtx.Provider value={{ user, loading, login, logout, refresh }}>
+      {children}
+    </AuthCtx.Provider>
   );
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
-export function useAuth() {
-  return useContext(AuthContext);
-}
+export const useAuth = () => useContext(AuthCtx);
